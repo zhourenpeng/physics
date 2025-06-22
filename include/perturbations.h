@@ -28,9 +28,10 @@ enum tca_flags {tca_on, tca_off};
 enum rsa_flags {rsa_off, rsa_on};
 enum tca_idm_dr_flags {tca_idm_dr_on, tca_idm_dr_off};
 enum rsa_idr_flags {rsa_idr_off, rsa_idr_on};
+enum rsa_dr_flags {rsa_dr_off, rsa_dr_on};
 enum ufa_flags {ufa_off, ufa_on};
 enum ncdmfa_flags {ncdmfa_off, ncdmfa_on};
-
+enum tca_cdm2_dr_flags {tca_cdm2_dr_on, tca_cdm2_dr_off};
 //@}
 
 /**
@@ -43,6 +44,8 @@ enum tca_method {first_order_MB,first_order_CAMB,first_order_CLASS,second_order_
 enum rsa_method {rsa_null,rsa_MD,rsa_MD_with_reio,rsa_none};
 enum idr_method {idr_free_streaming,idr_fluid}; /* for the idm-idr case */
 enum rsa_idr_method {rsa_idr_none,rsa_idr_MD};  /* for the idm-idr case */
+enum dr_method {dr_free_streaming,dr_fluid}; /* for the cdm2-dr case */
+enum rsa_dr_method {rsa_dr_none,rsa_dr_MD};  /* for the cdm2-dr case */
 enum ufa_method {ufa_mb,ufa_hu,ufa_CLASS,ufa_none};
 enum ncdmfa_method {ncdmfa_mb,ncdmfa_hu,ncdmfa_CLASS,ncdmfa_none};
 enum tensor_methods {tm_photons_only,tm_massless_approximation,tm_exact};
@@ -180,9 +183,11 @@ struct perturbations
   double * beta_idr;  /**< Angular contribution to collisional term at l>=2 for idr-idr */
 
   int idr_nature; /**< Nature of the interacting dark radiation (free streaming or fluid) */
-
+  
+  double * alpha_cdm2_dr; /**< Angular contribution to collisional term at l>=2 for cdm2_fr-idr */
+  double * beta_dr;  /**< Angular contribution to collisional term at l>=2 for dr-dr */
   //@}
-
+  int dr_nature; /**< Nature of the decay dark radiation (free streaming or fluid) */
   /** @name - useful flags inferred from the ones above */
 
   //@{
@@ -193,7 +198,8 @@ struct perturbations
   short has_idm_dr; /**< do we have idm-dr interactions? */
   short has_idm_soundspeed; /**< do we need to consider the dark matter sound speed in interaction models? */
   //@}
-
+  short has_cdm2_dr; /**< do we have cdm2-dr interactions? */
+  short has_cdm2_soundspeed; /**< do we need to consider the cdm2 sound speed in interaction models? */
   /** @name - gauge in which to perform the calculation */
 
   //@{
@@ -508,6 +514,10 @@ struct perturbations_vector
   /** The index to the first Legendre multipole of the DR expansion. Not
       that this is not exactly the usual delta, see Kaplinghat et al.,
       astro-ph/9907388. */
+  int index_pt_delta_dr; /**< density of decay dark radiation */
+  int index_pt_theta_dr; /**< velocity of decay dark radiation */
+  int index_pt_shear_dr; /**< shear of decay dark radiation */
+  int index_pt_l3_dr;    /**< l=3 of decay dark radiation */
   int index_pt_F0_dr;
   int l_max_dr;          /**< max momentum in Boltzmann hierarchy for dr) */
   int index_pt_psi0_ncdm1; /**< first multipole of perturbation of first ncdm species, Psi_0 */
@@ -591,16 +601,20 @@ struct perturbations_workspace
   double tca_shear_g;  /**< photon shear in tight-coupling approximation */
   double tca_slip;     /**< photon-baryon slip in tight-coupling approximation */
   double tca_shear_idm_dr; /**< interacting dark radiation shear in tight coupling appproximation */
+  double tca_shear_cdm2_dr; /**< decay dark radiation shear in tight coupling appproximation */
   double rsa_delta_g;  /**< photon density in radiation streaming approximation */
   double rsa_theta_g;  /**< photon velocity in radiation streaming approximation */
   double rsa_delta_ur; /**< photon density in radiation streaming approximation */
   double rsa_theta_ur; /**< photon velocity in radiation streaming approximation */
   double rsa_delta_idr; /**< interacting dark radiation density in dark radiation streaming approximation */
   double rsa_theta_idr; /**< interacting dark radiation velocity in dark radiation streaming approximation */
+  double rsa_delta_dr; /**< decay dark radiation density in dark radiation streaming approximation */
+  double rsa_theta_dr; /**< decay dark radiation velocity in dark radiation streaming approximation */
 
   double theta_idm; /**< interacting dark matter velocity */
   double theta_idm_prime; /**< derivative of interacting dark matter velocity in regard to conformal time */
-
+  double theta_cdm2; /**< cdm2 dark radiation velocity */
+  double theta_cdm2_prime; /**< derivative of cdm2 dark radiation velocity in
   double * delta_ncdm;	/**< relative density perturbation of each ncdm species */
   double * theta_ncdm;	/**< velocity divergence theta of each ncdm species */
   double * shear_ncdm;	/**< shear for each ncdm species */
@@ -642,7 +656,9 @@ struct perturbations_workspace
   int index_ap_tca; /**< index for tight-coupling approximation */
   int index_ap_rsa; /**< index for radiation streaming approximation */
   int index_ap_tca_idm_dr; /**< index for dark tight-coupling approximation (idm-idr) */
+  int index_ap_tca_cdm2_dr; /**< index for dark tight-coupling approximation (idm-idr) */
   int index_ap_rsa_idr; /**< index for dark radiation streaming approximation */
+  int index_ap_rsa_dr; /**< index for decay dark radiation streaming approximation */
   int index_ap_ufa; /**< index for ur fluid approximation */
   int index_ap_ncdmfa; /**< index for ncdm fluid approximation */
   int ap_size;      /**< number of relevant approximations for a given mode */
@@ -986,6 +1002,18 @@ extern "C" {
                                             ErrorMsg error_message
                                             );
 
+  int perturbations_rsa_dr_delta_and_theta(
+                                            struct precision * ppr,
+                                            struct background * pba,
+                                            struct thermodynamics * pth,
+                                            struct perturbations * ppt,
+                                            double k,
+                                            double * y,
+                                            double a_prime_over_a,
+                                            double * pvecthermo,
+                                            struct perturbations_workspace * ppw,
+                                            ErrorMsg error_message
+                                            );                                        
 #ifdef __cplusplus
 }
 #endif

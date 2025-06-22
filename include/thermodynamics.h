@@ -87,7 +87,9 @@ struct thermodynamics
   short has_idm_b;    /**< Do we have idm with baryons? */
   short has_idm_g;    /**< Do we have idm with photons? */
   short has_idm_dr;   /**< Do we have idm with dark radiation? */
-
+  short has_cdm2_dr; /**< Do we have cdm2 with dark radiation? */
+  short has_cdm2_b;    /**< Do we have cdm2 with baryons? */
+  short has_cdm2_g;    /**< Do we have cdm2 with photons? */
   /** parameters for reio_camb */
 
   double reionization_width; /**< width of H reionization */
@@ -207,6 +209,17 @@ struct thermodynamics
   int index_th_ddmu_idm_g;    /**< derivative of idm_g scattering, \f$ d^2 \mu / d \tau^2 \f$ */
   int index_th_dddmu_idm_g;   /**< second derivative of idm_g scattering rate, \f$ d^3 \mu / d \tau^3 \f$ */
   int index_th_exp_mu_idm_g;  /**< \f$ exp^{-\mu} \f$ */
+  int pth->index_th_T_cdm2; 
+  int index_th_c2_cdm2;      
+  int index_th_dmu_cdm2_dr; 
+  int index_th_ddmu_cdm2_dr;
+  int index_th_dddmu_cdm2_dr;
+  int index_th_tau_cdm2_dr; /**< optical depth of cdm2_dr (due to interactions with decay dr) */
+  int index_th_g_cdm2_dr;     /**< visibility function of cdm2_dr */
+  int index_th_T_cdm2;       /**< cdm2 temperature \f$ T_{cdm2} \f$ */
+  int index_th_T_dr;          /**< decay radiation temperature \f$ T_{dr} \f$ */
+  int index_th_dmu_dr;       /**< decay dr self-interaction rate */
+  int index_th_tau_dr;       /**< optical depth of decay dr (due to self-interactions) */
   int index_th_R_idm_b;       /**< idm_b interaction coefficient */
   int index_th_dR_idm_b;      /**< derivative of idm_b interaction coefficient wrt conformal time */
   int index_th_ddR_idm_b;     /**< second derivative of ibm_b interaction coefficient wrt conformal time */
@@ -274,7 +287,9 @@ struct thermodynamics
   double tau_idr_free_streaming; /**< trigger for dark radiation free streaming approximation (idm-idr) */
   double tau_idr;                /**< decoupling time for idr */
   double tau_idm_dr;             /**< decoupling time for idm from idr*/
-
+  double tau_dr_free_streaming; /**< trigger for dark radiation free streaming approximation (cdm2-dr) */
+  double tau_dr;                /**< decoupling time for dr */
+  double tau_cdm2_dr;
   //@}
 
   /** @name - initial conformal time at which thermodynamical variables have been be integrated */
@@ -308,7 +323,10 @@ struct thermodynamics
   double cross_idm_g;    /**< cross section between interacting dark matter and photons */
   double u_idm_g;        /**< ratio between idm_g cross section and idm mass */
   int n_index_idm_g;     /**< temperature dependence of the interactions between dark matter and photons */
-
+  double m_cdm2; 
+  double a_cdm2_dr; 
+  int n_index_cdm2_dr; /**< temperature dependence of the interactions between cdm2 and dark radiation */
+  double b_dr;          /**< strength of the self coupling for interacting dark radiation (dr-dr) */
   //@}
 
   /**
@@ -353,6 +371,7 @@ struct thermo_vector {
   int index_ti_x_He;    /**< index for helium fraction in y */
   int index_ti_D_Tmat;  /**< index for temperature difference between baryons and photons */
   int index_ti_T_idm;   /**< index for idm temperature fraction in y */
+  int index_ti_T_cdm2;   /**< index for cdm2 temperature fraction in y */
 
   double * y;           /**< vector of quantities to be integrated */
   double * dy;          /**< time-derivative of the same vector */
@@ -384,9 +403,15 @@ struct thermo_diffeq_workspace {
   double dmu_idm_dr;    /**< scattering rate of idr with idm_g_dr (i.e. idr opacity to idm_g_dr scattering) (units 1/Mpc) */
   double dmu_idr;       /**< idr self-interaction rate */
   double Sinv_idm_dr;   /**< ratio of idm and idr densities */
-
+  double dmu_cdm2_dr; /**< scattering rate of cdm2 with idr (i.e. idr opacity to cdm2 scattering) (units 1/Mpc) */
+  double dmu_dr;       /**< dr self-interaction rate */
+  double Sinv_cdm2_dr;   /**< ratio of cdm2 and dr densities */
+  double T_cdm2;         /**< cdm2 temperature \f$ T_{cdm2} \f$ */
+  double T_cdm2_prime;   /**< derivative of cdm2 temperature */
+  double c2_cdm2;        /**< sound speed for cdm2 \f$ c_{cdm2}^2  \f$*/
   /* index of approximation schemes for the thermal history */
   int index_ap_idmtca;/**< index for approximation during idm-g, idm-b or idm-dr tca*/
+  int index_ap_cdm2tca;/**< index for approximation during cdm2-dr tca */
   int index_ap_brec;  /**< before H- and He-recombination */
   int index_ap_He1;   /**< during 1st He-recombination (HeIII) */
   int index_ap_He1f;  /**< in between 1st and 2nd He recombination */
@@ -471,7 +496,8 @@ struct thermo_workspace {
 
   short has_ap_idmtca;         /**< flag to determine if we have idm tight-coupling approximation */
   double z_ap_idmtca;          /**< redshift at which we start idm tight-coupling approximation */
-
+  short has_ap_cdm2tca;        /**< flag to determine if we have cdm2 tight-coupling approximation */
+  double z_ap_cdm2tca;         /**< redshift at which we start cdm2 tight-coupling approximation */
   double reionization_optical_depth; /**< reionization optical depth inferred from reionization history */
 
   int last_index_back; /**< nearest location in background table */
@@ -665,6 +691,12 @@ extern "C" {
                                                       struct thermodynamics * pth,
                                                       double* pvecback);
 
+  int thermodynamics_calculate_cdm2_and_dr_quantities(struct precision * ppr,
+                                                      struct background * pba,
+                                                      struct thermodynamics * pth,
+                                                      double* pvecback);
+                                                  
+
   int thermodynamics_idm_quantities(struct background * pba,
                                     double z,
                                     double * y,
@@ -677,6 +709,19 @@ extern "C" {
                                              struct thermodynamics* pth,
                                              double z_ini,
                                              struct thermo_diffeq_workspace * ptdw);
+  
+  int thermodynamics_cdm2_quantities(struct background * pba,
+                                    double z,
+                                    double * y,
+                                    double * dy,
+                                    struct thermodynamics * pth,
+                                    struct thermo_workspace * ptw,
+                                    double * pvecback);
+
+  int thermodynamics_cdm2_initial_temperature(struct background* pba,
+                                             struct thermodynamics* pth,
+                                             double z_ini,
+                                             struct thermo_diffeq_workspace * ptdw);                                         
 
 #ifdef __cplusplus
 }

@@ -2369,8 +2369,8 @@ int input_read_parameters_species(struct file_content * pfc,
   /** Summary: */
 
   /** - Define local variables */
-  int flag1, flag2, flag3;
-  double param1, param2, param3;
+  int flag1, flag2, flag3, flag_u, flag_logu;
+  double param1, param2, param3, param_u, param_logu;
   char string1[_ARGUMENT_LENGTH_MAX_];
   int fileentries;
   int i;
@@ -2624,8 +2624,37 @@ int input_read_parameters_species(struct file_content * pfc,
     /** 5.d) Mass or Omega of each ncdm species */
     /* Read */
     class_read_list_of_doubles_or_default("m_ncdm",pba->m_ncdm_in_eV,0.0,N_ncdm);
-    /* Read interaction strength of each ncdm species: */
     class_read_list_of_doubles_or_default("u_ncdmdm",pba->u_ncdmdm,0.0,N_ncdm);
+    /* Read interaction strength of each ncdm species: */
+    //  class_call(parser_read_double(pfc,"u_ncdmdm",&param1,&flag1,errmsg),
+    //      errmsg,
+    //      errmsg);
+    class_call(parser_read_double(pfc,"u_common",&param_u,&flag_u,errmsg),
+         errmsg,
+         errmsg);
+    class_call(parser_read_double(pfc,"logu_common",&param_logu,&flag_logu,errmsg),
+         errmsg,
+         errmsg);
+
+    /* If u_common or logu_common is set, overwrite all u_ncdmdm values */
+
+    // if (flag1 == _TRUE_) {
+    //   for (n = 0; n < N_ncdm; n++) {
+    //     pba->u_ncdmdm[n] = param1;
+    //   }
+    // }
+    if (flag_u == _TRUE_) {
+      for (n = 0; n < N_ncdm; n++) {
+      pba->u_ncdmdm[n] = param_u;
+      }
+      pth->u_urDM_0 = param_u; // For consistency with the urdm case
+    }
+    if (flag_logu == _TRUE_) {
+      for (n = 0; n < N_ncdm; n++) {
+      pba->u_ncdmdm[n] = pow(10.0, param_logu);
+      }
+      pth->u_urDM_0 = pow(10.0, param_logu); // For consistency with the urdm case
+    }
 
     // class_call(parser_read_double(pfc,"u_ncdmdm_common",&param1,&flag2,errmsg),
     //          errmsg,
@@ -2837,8 +2866,9 @@ int input_read_parameters_species(struct file_content * pfc,
     pba->Omega0_dcdmdrcdm = param1;
   if (flag2 == _TRUE_)
     pba->Omega0_dcdmdrcdm = param2/pba->h/pba->h;
-  class_test(pba->Omega0_dcdmdrcdm<0,errmsg,"You cannot set the dcdmdr density to negative values.");
-
+  //printf("Omega0_dcdmdrcdm = %e, Omega_ini_dcdm=%e\n",pba->Omega0_dcdmdrcdm,pba->Omega_ini_dcdm);
+ // class_test(pba->Omega0_dcdmdrcdm<0,errmsg,"You cannot set the dcdmdr density to negative values.");
+  
   /** 7.1.b) Omega_ini_dcdm or omega_ini_dcdm */
   /* Read */
   class_call(parser_read_double(pfc,"Omega_ini_dcdm",&param1,&flag1,errmsg),
@@ -2870,6 +2900,9 @@ int input_read_parameters_species(struct file_content * pfc,
     class_call(parser_read_double(pfc,"tau_dcdm",&param2,&flag2,errmsg),                            // [s]
                errmsg,
                errmsg);
+    class_call(parser_read_double(pfc,"logGamma_dcdm",&param3,&flag3,errmsg),                            // [/Gyr]
+               errmsg,
+               errmsg);        
     /* Test */
     class_test(((flag1 == _TRUE_) && (flag2 == _TRUE_)),
                errmsg,
@@ -2883,6 +2916,10 @@ int input_read_parameters_species(struct file_content * pfc,
       pba->Gamma_dcdm = _Mpc_over_m_/(param2*_c_);                                                  // [Mpc]
       pba->tau_dcdm = param2;                                                                       // [s]
     }
+    if (flag3 == _TRUE_){
+      pba->Gamma_dcdm = pow(10,param3+3)*(1.e3/_c_);                                                  // [Mpc]
+      pba->tau_dcdm = _Mpc_over_m_*1e-3/pow(10,param3+3);                                                                       // [s]
+    }
     /* Test */
     class_test(pba->tau_dcdm<0.,
                errmsg,
@@ -2890,10 +2927,122 @@ int input_read_parameters_species(struct file_content * pfc,
     class_test(pba->Gamma_dcdm<0.,
                errmsg,
                "You need to enter a decay constant for the decaying DM 'Gamma_dcdm > 0.'");
-    class_read_double("varepsilon", pba->varepsilon);          
+    class_read_double("varepsilon", pba->varepsilon); 
+    class_read_double("a_cdm2_dr", pth->a_cdm2_dr);
+    if (pth->a_cdm2_dr > 0) {
+      class_read_double("n_cdm2_dr", pth->n_index_cdm2_dr);
+      class_read_double("m_cdm2",pth->m_cdm2);
+
+      class_test(pth->m_cdm2 <= 0.,
+               errmsg,
+               "m_cdm2 must be positive.");
+      class_test(pth->m_cdm2 < 1.e6,
+               errmsg,
+               "Note that the cdm2 formalism assumes the DM to be cold. You have chosen a low mass of m_cdm2=%e, which is beyond the regime in which the code has been tested.", pth->m_cdm2);
+
+      ppt->has_cdm2_soundspeed = _TRUE_;
+
+      class_read_flag("cdm2_soundspeed",ppt->has_cdm2_soundspeed);
+         
+    
+      class_call(parser_read_string(pfc,"dr_nature",&string1,&flag1,errmsg),
+                 errmsg,
+                 errmsg);
+      if (flag1 == _TRUE_) {
+        if ((strstr(string1,"free_streaming") != NULL) || (strstr(string1,"Free_Streaming") != NULL) || (strstr(string1,"Free_streaming") != NULL) || (strstr(string1,"FREE_STREAMING") != NULL)) {
+          ppt->dr_nature = dr_free_streaming;
+        }
+        if ((strstr(string1,"fluid") != NULL) || (strstr(string1,"Fluid") != NULL) || (strstr(string1,"FLUID") != NULL)) {
+          ppt->dr_nature = dr_fluid;
+        }
+      }
+    
+
+    /** 7.2.2.f) Strength of self interactions */
+      class_read_double_one_of_two("b_ddark","b_dr",pth->b_dr);
+
+    /** 7.2.2.g) Read alpha_cdm2_dr or alpha_ddark */
+      class_call(parser_read_list_of_doubles(pfc,"alpha_cdm2_dr",&entries_read,&(ppt->alpha_cdm2_dr),&flag1,errmsg),
+               errmsg,
+               errmsg);
+    /* try with the other syntax */
+      if (flag1 == _FALSE_) {
+        class_call(parser_read_list_of_doubles(pfc,"alpha_ddark",&entries_read,&(ppt->alpha_cdm2_dr),&flag1,errmsg),
+                 errmsg,
+                 errmsg);
+     }
+    if (ppt->has_perturbations) {
+      if (flag1 == _TRUE_){
+        if (ppt->perturbations_verbose > 0) {
+          class_test(entries_read > ppr->l_max_dr-1,
+                     errmsg,
+                     "The number of alpha_cdm2_dr parameters passed (%d) is bigger than l_max_dr-1=%d", entries_read, ppr->l_max_dr-1);
+        }
+        /* If less input than expected -> fill up with last value, otherwise nothing to do */
+        if (entries_read < (ppr->l_max_dr-1)){
+          if (ppt->perturbations_verbose > 0) {
+            printf("WARNING: only %i entries of alpha_cdm2_dr were provided for %i moments, filling up the rest with the last entry provided\n", entries_read, ppr->l_max_dr-1);
+          }
+          class_realloc(ppt->alpha_cdm2_dr,(ppr->l_max_dr-1)*sizeof(double),errmsg);
+          for (n=entries_read; n<(ppr->l_max_dr-1); n++) ppt->alpha_cdm2_dr[n] = ppt->alpha_cdm2_dr[entries_read-1];
+        }
+      }
+      else{
+        /* Allocate default values if we have cdm2, but the user doesn't provide input */
+        class_alloc(ppt->alpha_cdm2_dr,(ppr->l_max_dr-1)*sizeof(double),errmsg);
+        for (n=0; n<(ppr->l_max_dr-1); n++) ppt->alpha_cdm2_dr[n] = 1.5;
+      }
+    }
+    /* If we don't have perturbations, we should free the arrays again if necessary */
+    else if (ppt->alpha_cdm2_dr != NULL) {
+      free(ppt->alpha_cdm2_dr);
+     }
+
+    class_call(parser_read_list_of_doubles(pfc,"beta_dr",&entries_read,&(ppt->beta_dr),&flag1,errmsg),
+               errmsg,
+               errmsg);
+    /* try with the other syntax */
+    if (flag1 == _FALSE_) {
+      class_call(parser_read_list_of_doubles(pfc,"beta_ddark",&entries_read,&(ppt->beta_dr),&flag1,errmsg),
+                 errmsg,
+                 errmsg);
+    }
+
+    /* At this point these quantities might or might not be allocated */
+    /* If we have perturbations, everything is alright, go ahead and allocate default values */
+    if (ppt->has_perturbations == _TRUE_) {
+      if (flag1 == _TRUE_){
+        /* If less input than expected -> fill up with last value, otherwise nothing to do */
+        if (ppt->perturbations_verbose > 0) {
+          class_test(entries_read > ppr->l_max_dr-1,
+                     errmsg,
+                     "The number of beta_dr parameters passed (%d) is bigger than l_max_dr-1=%d", entries_read, ppr->l_max_dr-1);
+        }
+        if (entries_read < (ppr->l_max_dr-1)){
+          if (ppt->perturbations_verbose > 0) {
+            printf("WARNING: only %i entries of beta_dr were provided for %i moments, filling up the rest with the last entry provided\n", entries_read, ppr->l_max_dr-1);
+          }
+          class_realloc(ppt->beta_dr,(ppr->l_max_dr-1)*sizeof(double),errmsg);
+          for (n=entries_read; n<(ppr->l_max_dr-1); n++)
+            ppt->beta_dr[n] = ppt->beta_dr[entries_read-1];
+        }
+      }
+      else {
+        /* Allocate default values if we have cdm2, but the user doesn't provide input */
+        class_alloc(ppt->beta_dr,(ppr->l_max_dr-1)*sizeof(double),errmsg);
+        for (n=0; n<(ppr->l_max_dr-1); n++)
+          ppt->beta_dr[n] = 1.5;
+      }
+    }
+    /* If we don't have perturbations, we should free the arrays again if necessary */
+    else if (ppt->beta_dr != NULL) {
+      free(ppt->beta_dr);
+    }
+   }
   }
+
   if (has_m_budget == _TRUE_) {
-    class_test(Omega_m_remaining < pba->Omega0_dcdmdrcdm, errmsg, "Too much energy density from massive species. At this point only %e is left for Omega_m, but requested 'Omega_dcdmdr = %e'",Omega_m_remaining, pba->Omega0_dcdmdr);
+    class_test(Omega_m_remaining < pba->Omega0_dcdmdrcdm, errmsg, "Too much energy density from massive species. At this point only %e is left for Omega_m, but requested 'Omega_dcdmdr = %e'",Omega_m_remaining, pba->Omega0_dcdmdrcdm);
     Omega_m_remaining-= pba->Omega0_dcdmdrcdm;
   }
   
@@ -2906,6 +3055,7 @@ int input_read_parameters_species(struct file_content * pfc,
   class_call(parser_read_double(pfc,"logu_urDM_0",&param2,&flag2,errmsg),
              errmsg,
              errmsg);
+  
   /* Test */
   class_test(((flag1 == _TRUE_) && (flag2 == _TRUE_)),
              errmsg,
@@ -2918,7 +3068,7 @@ int input_read_parameters_species(struct file_content * pfc,
     pth->u_urDM_0 = pow(10.0, param2);
   }
 
-  if (pth->u_urDM_0>0.){
+  if (pth->u_urDM_0>0){
     pth->has_coupling_urDM = _TRUE_;
     class_read_double("n_urDM", pth->n_urDM);
     class_read_int("has_urDM_initially", ppr->has_urDM_initially);
@@ -3155,11 +3305,13 @@ int input_read_parameters_species(struct file_content * pfc,
     }
   }
 
+    
+
 /** this is a bit special: if nu-DM scattering is enabled initialize the list of hihger-order
       multipole coefficients, set default to 1 and read in vaues */
   if (pth->has_coupling_urDM==_TRUE_)
     {
-      double * read_alpha;
+      double * read_alpha= NULL ;
       parser_read_list_of_doubles(pfc,
                                   "alpha_urDM",
                                   &entries_read,
@@ -3170,6 +3322,10 @@ int input_read_parameters_species(struct file_content * pfc,
                   ppr->l_max_ur*sizeof(double),
                   errmsg);
       if(flag2==_TRUE_){
+        if (read_alpha == NULL) {
+           fprintf(stderr, "Error: read_alpha is NULL despite flag2==TRUE\n");
+           exit(1);
+      }
         for(i=0; i<entries_read; i++)
           ppt->alpha_urDM[i] = read_alpha[i];
         for(i=entries_read; i<ppr->l_max_ur; i++)
@@ -3179,7 +3335,10 @@ int input_read_parameters_species(struct file_content * pfc,
         for(i=0; i<ppr->l_max_ur; i++)
           ppt->alpha_urDM[i] = 1.;
       }
+        if (read_alpha != NULL) {
         free(read_alpha);
+        read_alpha = NULL;
+      }
     }
   /** end of the ur-DM section */
 
@@ -5795,7 +5954,7 @@ int input_default_params(struct background *pba,
 
   /** 1) Output spectra */
   pth->u_urDM_0=0.;
-  pth->n_urDM=0.;
+  pth->n_urDM=0;
   pth->has_coupling_urDM=_FALSE_;
   ppt->has_cl_cmb_temperature = _FALSE_;
   ppt->has_cl_cmb_polarization = _FALSE_;
@@ -5951,7 +6110,14 @@ int input_default_params(struct background *pba,
   pba->Gamma_dcdm = 0.0;
   pba->varepsilon = 0.0;
   pba->tau_dcdm = 0.0;
-
+  pth->a_cdm2_dr = 0.;
+  pth->n_index_cdm2_dr = 0;
+  pth->m_cdm2 = 1.e9;
+  ppt->dr_nature=idr_free_streaming;
+  pth->b_dr = 0.;
+  ppt->alpha_cdm2_dr = NULL;
+  ppt->beta_dr = NULL;
+  ppt->has_cdm2_soundspeed = _FALSE_;
   /** 7.2) Interacting Dark Matter */
   /** 7.2.1.a) Current factional density of idm */
   pba->Omega0_idm = 0;
@@ -5982,7 +6148,7 @@ int input_default_params(struct background *pba,
   /** 7.2.4.b) temperature scaling idm_g */
   pth->n_index_idm_g = 0;
   ppt->has_idm_soundspeed = _FALSE_;
-
+  
   /* ** ADDITIONAL SPECIES ** */
 
   /** 9) Dark energy contributions */

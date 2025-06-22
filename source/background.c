@@ -2038,6 +2038,7 @@ int background_solve(
   }
   if (pba->has_dr == _TRUE_) {
     pba->Omega0_dr = pvecback_integration[pba->index_bi_rho_dr]/pba->H0/pba->H0;
+    pba->T_dr = pba->T_cmb * pow(pba->Omega0_dr / (0.875 * pba->Omega0_g), 0.25);
   }
   if (pba->has_cdm2 == _TRUE_) {
     pba->Omega0_cdm2 = pvecback_integration[pba->index_bi_rho_cdm2]/pba->H0/pba->H0;

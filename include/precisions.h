@@ -124,6 +124,7 @@ class_precision_parameter(thermo_z_initial,double,5.e6)
  * redshift)
  */
 class_precision_parameter(thermo_z_initial_if_idm,double,1.e9)
+class_precision_parameter(thermo_z_initial_if_cdm2,double,1.e9)
 /**
  * The switch z for the recfast calculation towards linear sampling
  */
@@ -257,6 +258,9 @@ class_precision_parameter(k_per_decade_for_pk,double,10.0) /**< if values needed
 
 class_precision_parameter(idmdr_boost_k_per_decade_for_pk,double,1.0) /**< boost factor for the case of DAO in idm-idr models */
 
+class_precision_parameter(cdm2dr_boost_k_per_decade_for_pk,double,1.0) /**< boost factor for the case of DAO in cdm2-idr models */
+
+
 class_precision_parameter(k_per_decade_for_bao,double,70.0) /**< if values needed between kmax inferred from k_oscillations and k_kmax_for_pk, this gives the number of k per decade inside the BAO region (for finer sampling)*/
 
 class_precision_parameter(k_bao_center,double,3.0) /**< in ln(k) space, the central value of the BAO region where sampling is finer is defined as k_rec times this number (recommended: 3, i.e. finest sampling near 3rd BAO peak) */
@@ -309,7 +313,8 @@ class_precision_parameter(start_large_k_at_aH_over_dmu_urDM,double,1.0)
 
 class_precision_parameter(idm_dr_tight_coupling_trigger_tau_c_over_tau_k,double,0.01)  /**< when to switch off the dark-tight-coupling approximation, first condition (see normal tca for full definition) */
 class_precision_parameter(idm_dr_tight_coupling_trigger_tau_c_over_tau_h,double,0.015) /**< when to switch off the dark-tight-coupling approximation, second condition (see normal tca for full definition) */
-
+class_precision_parameter(cdm2_dr_tight_coupling_trigger_tau_c_over_tau_k,double,0.01)  /**< when to switch off the dark-tight-coupling approximation, first condition (see normal tca for full definition) */
+class_precision_parameter(cdm2_dr_tight_coupling_trigger_tau_c_over_tau_h,double,0.015) /**< when to switch off the dark-tight-coupling approximation, second condition (see normal tca for full definition) */
 class_precision_parameter(l_max_g,int,12)     /**< number of momenta in Boltzmann hierarchy for photon temperature (scalar), at least 4 */
 class_precision_parameter(l_max_pol_g,int,10) /**< number of momenta in Boltzmann hierarchy for photon polarization (scalar), at least 4 */
 class_precision_parameter(l_max_dr,int,17)   /**< number of momenta in Boltzmann hierarchy for decay radiation, at least 4 */
@@ -380,6 +385,9 @@ class_precision_parameter(radiation_streaming_trigger_tau_c_over_tau,double,5.0)
 class_precision_parameter(idr_streaming_approximation,int,rsa_idr_none) /**< method for dark radiation free-streaming approximation */
 class_precision_parameter(idr_streaming_trigger_tau_over_tau_k,double,50.0) /**< when to switch on dark radiation (idr) free-streaming approximation, first condition */
 class_precision_parameter(idr_streaming_trigger_tau_c_over_tau,double,10.0) /**< when to switch on dark radiation (idr) free-streaming approximation, second condition */
+class_precision_parameter(dr_streaming_approximation,int,rsa_dr_none) /**< method for dark radiation free-streaming approximation */
+class_precision_parameter(dr_streaming_trigger_tau_over_tau_k,double,50.0) /**< when to switch on dark radiation (dr) free-streaming approximation, first condition */
+class_precision_parameter(dr_streaming_trigger_tau_c_over_tau,double,10.0) /**< when to switch on dark radiation (dr) free-streaming approximation, second condition */
 
 class_precision_parameter(ur_fluid_approximation,int,ufa_CLASS) /**< method for ultra relativistic fluid approximation */
 /**
