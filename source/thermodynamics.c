@@ -232,6 +232,7 @@ int thermodynamics_at_z(
 
     if (pth->has_coupling_urDM==_TRUE_)
       pvecthermo[pth->index_th_dmu_urDM] = pow(1.+z, 2.+pth->n_urDM)*pth->u_urDM_0*3.*pba->H0*pba->H0/8./_PI_/_G_*pba->Omega0_nudm*pow(_c_,4)*_sigma_/1.e11/_eV_/_Mpc_over_m_;
+      // pvecthermo[pth->index_th_dmu_urDM] = pow(1.+z, 2.+2)*pth->u_urDM_0*3.*pba->H0*pba->H0/8./_PI_/_G_*pba->Omega0_nudm*pow(_c_,4)*_sigma_/1.e11/_eV_/_Mpc_over_m_;
       // printf("th_dmu_urDM128=%g,pth->index_th_dmu_urDM=%d,pth->n_urDM=%g,size=%d\n",pvecthermo[pth->index_th_dmu_urDM],pth->index_th_dmu_urDM,pth->n_urDM,pth->th_size);
     /* Calculate Tb assuming Tb ~ T_g at early times */
   }
@@ -3063,6 +3064,7 @@ int thermodynamics_sources(
 
   if (pth->has_coupling_urDM == _TRUE_) {
     pth->thermodynamics_table[(pth->tt_size-index_z-1)*pth->th_size + pth->index_th_dmu_urDM] = pow(1.+z, 2.+pth->n_urDM)*pth->u_urDM_0*3.*pba->H0*pba->H0/8./_PI_/_G_*pba->Omega0_nudm*pow(_c_,4)*_sigma_/1.e11/_eV_/_Mpc_over_m_;
+  //  pth->thermodynamics_table[(pth->tt_size-index_z-1)*pth->th_size + pth->index_th_dmu_urDM] = pow(1.+z, 2.+2)*pth->u_urDM_0*3.*pba->H0*pba->H0/8./_PI_/_G_*pba->Omega0_nudm*pow(_c_,4)*_sigma_/1.e11/_eV_/_Mpc_over_m_;
   }
 
   return _SUCCESS_;

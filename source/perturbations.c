@@ -5964,7 +5964,7 @@ int perturbations_initial_conditions(struct precision * ppr,
       }
 
       if (pba->has_cdm2 == _TRUE_) {
-        ppw->pv->y[ppw->pv->index_pt_delta_cdm2] -= (3.*a_prime_over - a*(1-pba->varepsilon)*pba->Gamma_dcdm)*alpha;
+        ppw->pv->y[ppw->pv->index_pt_delta_cdm2] -= (3.*a_prime_over_a - a*(1-pba->varepsilon)*pba->Gamma_dcdm)*alpha;
         ppw->pv->y[ppw->pv->index_pt_theta_cdm2] = k*k*alpha;
       }
       /* fluid */
@@ -9600,7 +9600,7 @@ int perturbations_derivs(double tau,
 
         dy[pv->index_pt_theta_nudm] = - a_prime_over_a*y[pv->index_pt_theta_nudm] + metric_euler; /* nudm velocity */
         //printf("derivs nudm before ncdm term\n"); //debug
-        if (pba->has_ncdm_dm_interactions == _TRUE_) {
+        if (pba->has_ncdm_dm_interactions == _TRUE_ ) {
           for (n_ncdm=0; n_ncdm<pv->N_ncdm; n_ncdm++) {
             dy[pv->index_pt_theta_nudm] += ppw->nudm_interaction_term[n_ncdm];
             //printf("dy[pv->index_pt_theta_nudm]=%g\n",dy[pv->index_pt_theta_nudm]);
@@ -9609,6 +9609,7 @@ int perturbations_derivs(double tau,
         if(pth->has_coupling_urDM==_TRUE_ && ppw->approx[ppw->index_ap_rsa] == (int)rsa_off)
 	         dy[pv->index_pt_theta_nudm] += S_urDM*pvecthermo[pth->index_th_dmu_urDM]*(y[pv->index_pt_theta_ur]-y[pv->index_pt_theta_nudm]);
           //  printf("pvecthermo[pth->index_th_dmu_urDM]9485=%g,pba->H0=%g,pth->n_urDM=%g,size=%d\n",pvecthermo[pth->index_th_dmu_urDM],pba->H0,pth->n_urDM,pth->th_size);
+
       }
     }
 
