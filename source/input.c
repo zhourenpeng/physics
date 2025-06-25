@@ -2928,6 +2928,7 @@ int input_read_parameters_species(struct file_content * pfc,
                errmsg,
                "You need to enter a decay constant for the decaying DM 'Gamma_dcdm > 0.'");
     class_read_double("varepsilon", pba->varepsilon); 
+<<<<<<< HEAD
     class_read_double("a_cdm2_dr", pth->a_cdm2_dr);
     if (pth->a_cdm2_dr > 0) {
       class_read_double("n_cdm2_dr", pth->n_index_cdm2_dr);
@@ -3039,6 +3040,12 @@ int input_read_parameters_species(struct file_content * pfc,
       free(ppt->beta_dr);
     }
    }
+=======
+    class_read_double("u_cdm2_dr", pth->u_cdm2_dr);
+    if (pth->u_cdm2_dr > 0) {
+    class_read_double("n_cdm2_dr", pth->n_cdm2_dr);
+    }         
+>>>>>>> 24154520d77d2357827565dba277e3242cec2b50
   }
 
   if (has_m_budget == _TRUE_) {
