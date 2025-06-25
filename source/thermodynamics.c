@@ -370,7 +370,7 @@ int thermodynamics_init(
   pth->has_idm_g = pba->has_idm && (pth->u_idm_g > 0.);
   pth->has_idm_dr = pba->has_idm && (pba->has_idr && pth->a_idm_dr > 0.);
   pth->has_idm_b = pba->has_idm && (pth->cross_idm_b > 0.);
-  pth->has_cdm2_dr = pba->has_cdm2_dr && (pth->a_cdm2_dr > 0.);
+  pth->has_cdm2_dr = pba->has_cdm2 && (pth->a_cdm2_dr > 0.);
   /** - update the user about which recombination code is being run */
   if (pth->thermodynamics_verbose > 0) {
     switch (pth->recombination) {
@@ -5310,7 +5310,7 @@ int thermodynamics_cdm2_initial_temperature(
 
   /* cdm2-dr steady state */
   if ((pth->has_cdm2_dr == _TRUE_) && (pth->n_index_cdm2_dr == 0)) {
-    epsilon = 2*4./3.*pvecback[pba->index_bg_rho_idr]/pvecback[pba->index_bg_rho_cdm2]*
+    epsilon = 2*4./3.*pvecback[pba->index_bg_rho_dr]/pvecback[pba->index_bg_rho_cdm2]*
       pth->a_cdm2_dr*pow((1.+ z_ini)/1.e7,pth->n_index_cdm2_dr)*pba->Omega0_cdm2*pow(pba->h,2) / pvecback[pba->index_bg_H]*(1.+z_ini);
   }
 

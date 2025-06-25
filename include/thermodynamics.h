@@ -209,7 +209,6 @@ struct thermodynamics
   int index_th_ddmu_idm_g;    /**< derivative of idm_g scattering, \f$ d^2 \mu / d \tau^2 \f$ */
   int index_th_dddmu_idm_g;   /**< second derivative of idm_g scattering rate, \f$ d^3 \mu / d \tau^3 \f$ */
   int index_th_exp_mu_idm_g;  /**< \f$ exp^{-\mu} \f$ */
-  int pth->index_th_T_cdm2; 
   int index_th_c2_cdm2;      
   int index_th_dmu_cdm2_dr; 
   int index_th_ddmu_cdm2_dr;

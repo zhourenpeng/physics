@@ -614,7 +614,7 @@ struct perturbations_workspace
   double theta_idm; /**< interacting dark matter velocity */
   double theta_idm_prime; /**< derivative of interacting dark matter velocity in regard to conformal time */
   double theta_cdm2; /**< cdm2 dark radiation velocity */
-  double theta_cdm2_prime; /**< derivative of cdm2 dark radiation velocity in
+  double theta_cdm2_prime; /**< derivative of cdm2 dark radiation velocity in*/
   double * delta_ncdm;	/**< relative density perturbation of each ncdm species */
   double * theta_ncdm;	/**< velocity divergence theta of each ncdm species */
   double * shear_ncdm;	/**< shear for each ncdm species */

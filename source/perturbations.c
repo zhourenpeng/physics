@@ -5157,8 +5157,53 @@ int perturbations_vector_init(
             }
 
           }
+        
 
-          if (pth->has_cdm2_dr == _TRUE_) {
+          if (pba->has_ur == _TRUE_) {
+
+            if (ppw->approx[ppw->index_ap_rsa] == (int)rsa_off) {
+
+
+              ppv->y[ppv->index_pt_delta_ur] =
+                ppw->pv->y[ppw->pv->index_pt_delta_ur];
+
+              ppv->y[ppv->index_pt_theta_ur] =
+                ppw->pv->y[ppw->pv->index_pt_theta_ur];
+
+              ppv->y[ppv->index_pt_shear_ur] =
+                ppw->pv->y[ppw->pv->index_pt_shear_ur];
+
+              if (ppw->approx[ppw->index_ap_ufa] == (int)ufa_off) {
+
+                ppv->y[ppv->index_pt_l3_ur] =
+                  ppw->pv->y[ppw->pv->index_pt_l3_ur];
+
+                for (l=4; l <= ppv->l_max_ur; l++)
+                  ppv->y[ppv->index_pt_delta_ur+l] =
+                    ppw->pv->y[ppw->pv->index_pt_delta_ur+l];
+
+              }
+            }
+          }
+          
+          if (pba->has_ncdm == _TRUE_) {
+            index_pt = 0;
+            for (n_ncdm = 0; n_ncdm < ppv->N_ncdm; n_ncdm++){
+              for (index_q=0; index_q < ppv->q_size_ncdm[n_ncdm]; index_q++){
+                for (l=0; l<=ppv->l_max_ncdm[n_ncdm]; l++){
+                  /* This is correct even when ncdmfa == off, since ppv->l_max_ncdm and
+                     ppv->q_size_ncdm is updated. */
+                  ppv->y[ppv->index_pt_psi0_ncdm1+index_pt] =
+                    ppw->pv->y[ppw->pv->index_pt_psi0_ncdm1+index_pt];
+                  index_pt++;
+                }
+              }
+            }
+          }
+        }
+      }
+      
+      if (pth->has_cdm2_dr == _TRUE_) {
 
         /* Case of switching off interacting dark radiation tight coupling approximation */
 
@@ -5221,11 +5266,11 @@ int perturbations_vector_init(
 
               ppv->y[ppv->index_pt_pol0_g+l] =
                 ppw->pv->y[ppw->pv->index_pt_pol0_g+l];
+              }
+              
+
             }
-
-          }
-
-          if (pba->has_ur == _TRUE_) {
+           if (pba->has_ur == _TRUE_) {
 
             if (ppw->approx[ppw->index_ap_rsa] == (int)rsa_off) {
 
@@ -5251,7 +5296,7 @@ int perturbations_vector_init(
               }
             }
           }
-
+          
           if (pba->has_ncdm == _TRUE_) {
             index_pt = 0;
             for (n_ncdm = 0; n_ncdm < ppv->N_ncdm; n_ncdm++){
@@ -5266,8 +5311,8 @@ int perturbations_vector_init(
               }
             }
           }
-        }
-      }
+         }
+        } 
 
       /* -- case of switching on ncdm fluid
          approximation. Provide correct initial conditions to new set
@@ -7015,7 +7060,7 @@ int perturbations_einstein(
   double k2,a,a2,a_prime_over_a;
   double s2_squared;
   double shear_g = 0.;
-  double shear_idr = 0.;
+  double shear_idr = 0.,shear_dr;
 
   /** - define wavenumber and scale factor related quantities */
 
@@ -7264,6 +7309,9 @@ int perturbations_total_stress_energy(
   double delta_idr=0.;
   double theta_idr=0.;
   double shear_idr=0.;
+  double delta_dr=0.;
+  double theta_dr=0.;
+  double shear_dr=0.;
   double rho_delta_ncdm=0.;
   double rho_plus_p_theta_ncdm=0.;
   double rho_plus_p_shear_ncdm=0.;
@@ -7546,7 +7594,7 @@ int perturbations_total_stress_energy(
     }
     /* ultra-relativistic decay radiation */
 
-    if (pba->has_dr == _TRUE_ && pba->has_cdm2_dr != _TRUE_) {
+    if (pba->has_dr == _TRUE_ && pth->has_cdm2_dr != _TRUE_) {
       /* We have delta_rho_dr = rho_dr * F0_dr / f, where F follows the
          convention in astro-ph/9907388 and f is defined as
          f = rho_dr*a^4/rho_crit_today. In CLASS density units
@@ -7560,7 +7608,7 @@ int perturbations_total_stress_energy(
 
       ppw->rho_plus_p_tot += 4./3. * ppw->pvecback[pba->index_bg_rho_dr];
     }
-    if (pba->has_dr == _TRUE_ && pba->has_cdm2_dr == _TRUE_){
+    if (pba->has_dr == _TRUE_ && pth->has_cdm2_dr == _TRUE_){
       ppw->delta_rho += ppw->pvecback[pba->index_bg_rho_dr]*delta_dr;
       ppw->rho_plus_p_theta += 4./3.*ppw->pvecback[pba->index_bg_rho_dr]*theta_dr;
       if (ppt->dr_nature==dr_free_streaming)
@@ -9437,7 +9485,7 @@ int perturbations_derivs(double tau,
   double delta_g=0.,theta_g=0.,shear_g=0.;
   double delta_b,theta_b;
   double delta_idm = 0., theta_idm = 0., delta_cdm2 = 0., theta_cdm2 = 0.;
-  double delta_idr=0., theta_idr=0.;
+  double delta_idr=0., theta_idr=0., delta_dr=0., theta_dr=0.;
   double cb2,cs2,ca2,delta_p_b_over_rho_b;
   double metric_continuity=0.,metric_euler=0.,metric_shear=0.,metric_ufa_class=0.;
 
@@ -10066,13 +10114,13 @@ int perturbations_derivs(double tau,
       /* f = rho_dr*a^4/rho_crit_today. In CLASS density units
          rho_crit_today = H0^2.
       */
-      if(pba->has_cdm2_dr == _TRUE_) {
-        dy[pv->index_pt_theta_cdm2] += -S_cdm2_dr * dmu_cdm2_dr * (theta_cdm2 - theta_dr) + k2*c2_cdm2*delta_cdm2
+      if(pth->has_cdm2_dr == _TRUE_) {
+        dy[pv->index_pt_theta_cdm2] += -S_cdm2_dr * dmu_cdm2_dr * (theta_cdm2 - theta_dr) + k2*c2_cdm2*delta_cdm2;
       }
 
       f_dr = pow(pow(a,2)/pba->H0,2)*pvecback[pba->index_bg_rho_dr];
       fprime_dr = pba->varepsilon*pba->Gamma_dcdm*pvecback[pba->index_bg_rho_dcdm]*pow(a,5)/pow(pba->H0,2);
-      if (pba->has_cdm2_dr == _TRUE_) {
+      if (pth->has_cdm2_dr == _TRUE_) {
 
         if (ppw->approx[ppw->index_ap_rsa_dr] == (int)rsa_dr_off) {
 
@@ -11391,6 +11439,52 @@ int perturbations_rsa_idr_delta_and_theta(
       ppw->rsa_delta_idr = 4./k2*(a_prime_over_a*ppw->pvecmetric[ppw->index_mt_h_prime]
                                   -k2*y[ppw->pv->index_pt_eta]);
       ppw->rsa_theta_idr = -0.5*ppw->pvecmetric[ppw->index_mt_h_prime];
+
+    }
+  }
+
+  return _SUCCESS_;
+
+}
+
+int perturbations_rsa_dr_delta_and_theta(
+                                          struct precision * ppr,
+                                          struct background * pba,
+                                          struct thermodynamics * pth,
+                                          struct perturbations * ppt,
+                                          double k,
+                                          double * y,
+                                          double a_prime_over_a,
+                                          double * pvecthermo,
+                                          struct perturbations_workspace * ppw,
+                                          ErrorMsg error_message
+                                          ) {
+  /* - define local variables */
+
+  double k2;
+
+  k2 = k*k;
+
+  // formulas below TBC for curvaturema
+
+  /* newtonian gauge */
+  if (ppt->gauge == newtonian) {
+
+    if (ppw->approx[ppw->index_ap_rsa_dr] == (int)rsa_dr_on) {
+
+      ppw->rsa_delta_dr = -4.*y[ppw->pv->index_pt_phi];
+      ppw->rsa_theta_dr = 6.*ppw->pvecmetric[ppw->index_mt_phi_prime];
+
+    }
+  }
+
+  if (ppt->gauge == synchronous) {
+
+    if (ppw->approx[ppw->index_ap_rsa_dr] == (int)rsa_dr_on) {
+
+      ppw->rsa_delta_dr = 4./k2*(a_prime_over_a*ppw->pvecmetric[ppw->index_mt_h_prime]
+                                  -k2*y[ppw->pv->index_pt_eta]);
+      ppw->rsa_theta_dr = -0.5*ppw->pvecmetric[ppw->index_mt_h_prime];
 
     }
   }
