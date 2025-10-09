@@ -276,7 +276,7 @@ class_precision_parameter(start_large_k_at_tau_h_over_tau_k,double,0.07)  /**< l
  * tight-coupling to be switched off.
  */
 class_precision_parameter(tight_coupling_trigger_tau_c_over_tau_h,double,0.015)
-
+class_precision_parameter(tight_coupling_trigger_tau_dmu_idm_g_over_tau_h,double,0.015)
 /**
  * when to switch off tight-coupling approximation:
  * second condition: \f$ \tau_c/\tau_k \equiv k \tau_c \f$ <
@@ -284,7 +284,7 @@ class_precision_parameter(tight_coupling_trigger_tau_c_over_tau_h,double,0.015)
  * Decrease this value to switch off earlier in time.
  */
 class_precision_parameter(tight_coupling_trigger_tau_c_over_tau_k,double,0.01)
-
+class_precision_parameter(tight_coupling_trigger_tau_dmu_idm_g_over_tau_k,double,0.015)
 /**
  * when to switch off tight-coupling approximation:
  * third condition: for the case of idm with photons.

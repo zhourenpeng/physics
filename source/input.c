@@ -2369,8 +2369,8 @@ int input_read_parameters_species(struct file_content * pfc,
   /** Summary: */
 
   /** - Define local variables */
-  int flag1, flag2, flag3;
-  double param1, param2, param3;
+  int flag1, flag2, flag3, flag_u, flag_logu;
+  double param1, param2, param3, param_u, param_logu;
   char string1[_ARGUMENT_LENGTH_MAX_];
   int fileentries;
   int i;
@@ -2624,8 +2624,37 @@ int input_read_parameters_species(struct file_content * pfc,
     /** 5.d) Mass or Omega of each ncdm species */
     /* Read */
     class_read_list_of_doubles_or_default("m_ncdm",pba->m_ncdm_in_eV,0.0,N_ncdm);
-    /* Read interaction strength of each ncdm species: */
     class_read_list_of_doubles_or_default("u_ncdmdm",pba->u_ncdmdm,0.0,N_ncdm);
+    /* Read interaction strength of each ncdm species: */
+    //  class_call(parser_read_double(pfc,"u_ncdmdm",&param1,&flag1,errmsg),
+    //      errmsg,
+    //      errmsg);
+    class_call(parser_read_double(pfc,"u_common",&param_u,&flag_u,errmsg),
+         errmsg,
+         errmsg);
+    class_call(parser_read_double(pfc,"logu_common",&param_logu,&flag_logu,errmsg),
+         errmsg,
+         errmsg);
+
+    /* If u_common or logu_common is set, overwrite all u_ncdmdm values */
+
+    // if (flag1 == _TRUE_) {
+    //   for (n = 0; n < N_ncdm; n++) {
+    //     pba->u_ncdmdm[n] = param1;
+    //   }
+    // }
+    if (flag_u == _TRUE_) {
+      for (n = 0; n < N_ncdm; n++) {
+      pba->u_ncdmdm[n] = param_u;
+      }
+      pth->u_urDM_0 = param_u; // For consistency with the urdm case
+    }
+    if (flag_logu == _TRUE_) {
+      for (n = 0; n < N_ncdm; n++) {
+      pba->u_ncdmdm[n] = pow(10.0, param_logu);
+      }
+      pth->u_urDM_0 = pow(10.0, param_logu); // For consistency with the urdm case
+    }
 
     // class_call(parser_read_double(pfc,"u_ncdmdm_common",&param1,&flag2,errmsg),
     //          errmsg,
@@ -2837,8 +2866,9 @@ int input_read_parameters_species(struct file_content * pfc,
     pba->Omega0_dcdmdrcdm = param1;
   if (flag2 == _TRUE_)
     pba->Omega0_dcdmdrcdm = param2/pba->h/pba->h;
-  class_test(pba->Omega0_dcdmdrcdm<0,errmsg,"You cannot set the dcdmdr density to negative values.");
-
+  //printf("Omega0_dcdmdrcdm = %e, Omega_ini_dcdm=%e\n",pba->Omega0_dcdmdrcdm,pba->Omega_ini_dcdm);
+ // class_test(pba->Omega0_dcdmdrcdm<0,errmsg,"You cannot set the dcdmdr density to negative values.");
+  
   /** 7.1.b) Omega_ini_dcdm or omega_ini_dcdm */
   /* Read */
   class_call(parser_read_double(pfc,"Omega_ini_dcdm",&param1,&flag1,errmsg),
@@ -2870,6 +2900,9 @@ int input_read_parameters_species(struct file_content * pfc,
     class_call(parser_read_double(pfc,"tau_dcdm",&param2,&flag2,errmsg),                            // [s]
                errmsg,
                errmsg);
+    class_call(parser_read_double(pfc,"logGamma_dcdm",&param3,&flag3,errmsg),                            // [/Gyr]
+               errmsg,
+               errmsg);        
     /* Test */
     class_test(((flag1 == _TRUE_) && (flag2 == _TRUE_)),
                errmsg,
@@ -2883,6 +2916,10 @@ int input_read_parameters_species(struct file_content * pfc,
       pba->Gamma_dcdm = _Mpc_over_m_/(param2*_c_);                                                  // [Mpc]
       pba->tau_dcdm = param2;                                                                       // [s]
     }
+    if (flag3 == _TRUE_){
+      pba->Gamma_dcdm = pow(10,param3+3)*(1.e3/_c_);                                                  // [Mpc]
+      pba->tau_dcdm = _Mpc_over_m_*1e-3/pow(10,param3+3);                                                                       // [s]
+    }
     /* Test */
     class_test(pba->tau_dcdm<0.,
                errmsg,
@@ -2893,7 +2930,7 @@ int input_read_parameters_species(struct file_content * pfc,
     class_read_double("varepsilon", pba->varepsilon);          
   }
   if (has_m_budget == _TRUE_) {
-    class_test(Omega_m_remaining < pba->Omega0_dcdmdrcdm, errmsg, "Too much energy density from massive species. At this point only %e is left for Omega_m, but requested 'Omega_dcdmdr = %e'",Omega_m_remaining, pba->Omega0_dcdmdr);
+    class_test(Omega_m_remaining < pba->Omega0_dcdmdrcdm, errmsg, "Too much energy density from massive species. At this point only %e is left for Omega_m, but requested 'Omega_dcdmdr = %e'",Omega_m_remaining, pba->Omega0_dcdmdrcdm);
     Omega_m_remaining-= pba->Omega0_dcdmdrcdm;
   }
   
@@ -2906,6 +2943,7 @@ int input_read_parameters_species(struct file_content * pfc,
   class_call(parser_read_double(pfc,"logu_urDM_0",&param2,&flag2,errmsg),
              errmsg,
              errmsg);
+  
   /* Test */
   class_test(((flag1 == _TRUE_) && (flag2 == _TRUE_)),
              errmsg,
@@ -2918,7 +2956,7 @@ int input_read_parameters_species(struct file_content * pfc,
     pth->u_urDM_0 = pow(10.0, param2);
   }
 
-  if (pth->u_urDM_0>0.){
+  if (pth->u_urDM_0>0){
     pth->has_coupling_urDM = _TRUE_;
     class_read_double("n_urDM", pth->n_urDM);
     class_read_int("has_urDM_initially", ppr->has_urDM_initially);
@@ -3159,7 +3197,7 @@ int input_read_parameters_species(struct file_content * pfc,
       multipole coefficients, set default to 1 and read in vaues */
   if (pth->has_coupling_urDM==_TRUE_)
     {
-      double * read_alpha;
+      double * read_alpha= NULL ;
       parser_read_list_of_doubles(pfc,
                                   "alpha_urDM",
                                   &entries_read,
@@ -3170,6 +3208,10 @@ int input_read_parameters_species(struct file_content * pfc,
                   ppr->l_max_ur*sizeof(double),
                   errmsg);
       if(flag2==_TRUE_){
+        if (read_alpha == NULL) {
+           fprintf(stderr, "Error: read_alpha is NULL despite flag2==TRUE\n");
+           exit(1);
+      }
         for(i=0; i<entries_read; i++)
           ppt->alpha_urDM[i] = read_alpha[i];
         for(i=entries_read; i<ppr->l_max_ur; i++)
@@ -3179,7 +3221,10 @@ int input_read_parameters_species(struct file_content * pfc,
         for(i=0; i<ppr->l_max_ur; i++)
           ppt->alpha_urDM[i] = 1.;
       }
+        if (read_alpha != NULL) {
         free(read_alpha);
+        read_alpha = NULL;
+      }
     }
   /** end of the ur-DM section */
 
@@ -5795,7 +5840,7 @@ int input_default_params(struct background *pba,
 
   /** 1) Output spectra */
   pth->u_urDM_0=0.;
-  pth->n_urDM=0.;
+  pth->n_urDM=0;
   pth->has_coupling_urDM=_FALSE_;
   ppt->has_cl_cmb_temperature = _FALSE_;
   ppt->has_cl_cmb_polarization = _FALSE_;

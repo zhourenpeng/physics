@@ -4474,7 +4474,8 @@ int perturbations_vector_init(
                    ppt->error_message,
                    "at tau=%g: the dark tight-coupling approximation can be switched off, not on",tau);
       }
-
+      
+      
       /** - ---> (a.2.) some variables (b, cdm, fld, ...) are not affected by
           any approximation. They need to be reconducted whatever
           the approximation switching is. We treat them here. Below
@@ -5964,7 +5965,7 @@ int perturbations_initial_conditions(struct precision * ppr,
       }
 
       if (pba->has_cdm2 == _TRUE_) {
-        ppw->pv->y[ppw->pv->index_pt_delta_cdm2] -= (3.*a_prime_over - a*(1-pba->varepsilon)*pba->Gamma_dcdm)*alpha;
+        ppw->pv->y[ppw->pv->index_pt_delta_cdm2] -= (3.*a_prime_over_a - a*(1-pba->varepsilon)*pba->Gamma_dcdm)*alpha;
         ppw->pv->y[ppw->pv->index_pt_theta_cdm2] = k*k*alpha;
       }
       /* fluid */
@@ -6347,15 +6348,23 @@ int perturbations_approximations(
 
 
       /* for idm_g there is a third condition for the tca */
+      // if (pth->has_idm_g == _TRUE_) {
+      //   if (tau_c/tau_dmu_idm_g >= ppr->tight_coupling_trigger_tau_c_over_tau_dmu_idm_g) {
+      //     if (ppw->approx[ppw->index_ap_tca] == (int)tca_on && ppt->perturbations_verbose > 2)   {
+      //       printf("switched off tca for k = %5.e because of idm_g at tau = %5.e\n", k, tau);
+      //     }
+      //     ppw->approx[ppw->index_ap_tca] = (int)tca_off;
+      //   }
+      // }
+
       if (pth->has_idm_g == _TRUE_) {
-        if (tau_c/tau_dmu_idm_g >= ppr->tight_coupling_trigger_tau_c_over_tau_dmu_idm_g) {
-          if (ppw->approx[ppw->index_ap_tca] == (int)tca_on && ppt->perturbations_verbose > 2)   {
-            printf("switched off tca for k = %5.e because of idm_g at tau = %5.e\n", k, tau);
-          }
-          ppw->approx[ppw->index_ap_tca] = (int)tca_off;
+        if ((tau_dmu_idm_g/tau_h < ppr->tight_coupling_trigger_tau_dmu_idm_g_over_tau_h) &&
+          (tau_dmu_idm_g/tau_k < ppr->tight_coupling_trigger_tau_dmu_idm_g_over_tau_k)) {
+           ppw->approx[ppw->index_ap_tca] = (int)tca_on;          
         }
-      }
     }
+    }
+    
     /* for idm_b there is a fourth condition for the tca */
     if (pth->has_idm_b == _TRUE_) {
       tau_R_idm_b = 1./ppw->pvecthermo[pth->index_th_R_idm_b];
@@ -7252,7 +7261,7 @@ int perturbations_total_stress_energy(
           C_nudm =0;
           divisor_int =0;
           C_nudm_int_theta=0;
-          
+          C_nudm = ppw->pvecback[pba->index_bg_A_nudm1+n_ncdm]*q*epsilon/epsilon_now/epsilon_now;
           for(index_q=0; index_q < 11; index_q ++){
             q = pba->q_ncdm[n_ncdm][index_q];
             q2 = q*q;
@@ -7260,10 +7269,9 @@ int perturbations_total_stress_energy(
             epsilon = sqrt(q*q+a2*pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]);
             epsilon_phy = sqrt(p_phy*p_phy+pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]);
             epsilon_now = sqrt(q*q+pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]);
-            ratio = (epsilon_phy*epsilon_phy+pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm])/(epsilon_now*epsilon_now+pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]);
-            C_nudm = ppw->pvecback[pba->index_bg_A_nudm1+n_ncdm]*q2/epsilon/epsilon;
-            C_nudm_int_theta += 2*q2*q*pba->w_ncdm[n_ncdm][index_q]*ratio*(1+p_phy*p_phy/3./(epsilon_phy*epsilon_phy+pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]))*q2/epsilon/epsilon/3.* epsilon/q *pba->dlnf0_dlnq_ncdm[n_ncdm][index_q];
-            C_nudm_int_psi1 +=2*q2*pba->w_ncdm[n_ncdm][index_q]*q2/epsilon/epsilon*ratio*(1+p_phy*p_phy/3./(epsilon_phy*epsilon_phy+pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]));
+            ratio = 1-1./3.*q2/epsilon/epsilon;           
+            C_nudm_int_theta += 1./3.*ratio*q2*q*pba->w_ncdm[n_ncdm][index_q]*q*epsilon/epsilon_now/epsilon_now* epsilon/q *pba->dlnf0_dlnq_ncdm[n_ncdm][index_q];
+            C_nudm_int_psi1 +=ratio*q2*pba->w_ncdm[n_ncdm][index_q]*q*epsilon/epsilon_now/epsilon_now;
             divisor_int_mean +=q2*pba->w_ncdm[n_ncdm][index_q];
             divisor_int +=q2*epsilon*pba->w_ncdm[n_ncdm][index_q]+1/3*q2*q2/epsilon*pba->w_ncdm[n_ncdm][index_q];
           
@@ -7331,17 +7339,17 @@ int perturbations_total_stress_energy(
             p_phy = q/a;
             epsilon_phy = sqrt(p_phy*p_phy+pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]);
             epsilon_now = sqrt(q*q+pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]);
-            ratio = (epsilon_phy*epsilon_phy+pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm])/(epsilon_now*epsilon_now+pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]);
+            ratio = 1-1./3.*q2/epsilon/epsilon; 
             rho_delta_ncdm += q2*epsilon*pba->w_ncdm[n_ncdm][index_q]*y[idx];
             rho_plus_p_theta_ncdm += q2*q*pba->w_ncdm[n_ncdm][index_q]*y[idx+1];
             rho_plus_p_shear_ncdm += q2*q2/epsilon*pba->w_ncdm[n_ncdm][index_q]*y[idx+2];
             delta_p_ncdm += q2*q2/epsilon*pba->w_ncdm[n_ncdm][index_q]*y[idx];
 
             if (pba->has_ncdm_dm_interactions == _TRUE_) {
-              C_nudm = ppw->pvecback[pba->index_bg_A_nudm1+n_ncdm]*q2/epsilon/epsilon;
+              C_nudm = ppw->pvecback[pba->index_bg_A_nudm1+n_ncdm]*q*epsilon/epsilon_now/epsilon_now;
               //printf("Stress-Energy, no approx:\n");
               //printf("C_nudm = %f, log(a) = %f, q= %f, n_ncdm = %i\n", C_nudm, log10(a), q, n_ncdm);
-              C_nudm_int += q2*q*pba->w_ncdm[n_ncdm][index_q]*C_nudm*2*ratio*(1+p_phy*p_phy/3./(epsilon_phy*epsilon_phy+pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]))*(y[idx+1]
+              C_nudm_int += ratio*q2*q*pba->w_ncdm[n_ncdm][index_q]*C_nudm*(y[idx+1]
                 + y[ppw->pv->index_pt_theta_nudm]/3./k * epsilon/q *pba->dlnf0_dlnq_ncdm[n_ncdm][index_q]);
              // divisor_int += q2*q*pba->w_ncdm[n_ncdm][index_q];
               divisor_int+=q2*epsilon*pba->w_ncdm[n_ncdm][index_q]+1/3*q2*q2/epsilon*pba->w_ncdm[n_ncdm][index_q];
@@ -9030,8 +9038,8 @@ int perturbations_derivs(double tau,
   int l;
 
   /* scale factor and other background quantities */
-  double a,a2,a_prime_over_a,R;
-
+  double a,a2,a_prime_over_a,R, a_primeprime_over_a;
+  double tau_h=0., tau_k=0.;
   /* short-cut names for the fields of the input structure */
   struct perturbations_parameters_and_workspace * pppaw;
   double k,k2;
@@ -9049,7 +9057,7 @@ int perturbations_derivs(double tau,
 
   /* short-cut notations for the perturbations */
   double delta_g=0.,theta_g=0.,shear_g=0.;
-  double delta_b,theta_b;
+  double delta_b,theta_b, theta_b_prime;
   double delta_idm = 0., theta_idm = 0.;
   double delta_idr=0., theta_idr=0.;
   double cb2,cs2,ca2,delta_p_b_over_rho_b;
@@ -9071,9 +9079,9 @@ int perturbations_derivs(double tau,
   double w_fld,dw_over_da_fld,w_prime_fld,integral_fld;
 
   /*  for use with interacting dark matter  */
-  double c2_idm=0., S_idm_g=0.;
-  double dmu_idm_g = 0., photon_scattering_rate;
-  double S_idm_dr=0., dmu_idm_dr=0., dmu_idr=0., tca_slip_idm_dr=0.;
+  double c2_idm=0.,c2_idm_prime=0., S_idm_g=0.;
+  double dmu_idm_g = 0., ddmu_idm_g=0, photon_scattering_rate, tau_dmu_idm_g=0., F_idm_g=0., theta_idm_prime=0., theta_idm_prime_prime=0., dtau_dmu_idm_g=0;
+  double S_idm_dr=0., dmu_idm_dr=0., dmu_idr=0., tca_slip_idm_dr=0., tca_slip_idm_g=0;
   double R_idm_b = 0., dR_idm_b = 0., S_idm_b = 0.; /* these are just going to be used as a short hand notation */
 
   /* for use with non-cold dark matter (ncdm): */
@@ -9156,11 +9164,14 @@ int perturbations_derivs(double tau,
   S_urDM = 4./3.*pvecback[pba->index_bg_rho_ur]/pvecback[pba->index_bg_rho_nudm];
   // printf("S_urDM=%g\n",S_urDM);
   photon_scattering_rate = pvecthermo[pth->index_th_dkappa];
-
+  a_primeprime_over_a = pvecback[pba->index_bg_H_prime] * a + 2. * a_prime_over_a * a_prime_over_a;
+  tau_k = 1./pppaw->k;
+  tau_h = 1./(pvecback[pba->index_bg_H]*pvecback[pba->index_bg_a]);
   if (pba->has_idm == _TRUE_) {
 
     if (ppt->has_idm_soundspeed == _TRUE_) {
       c2_idm = pvecthermo[pth->index_th_c2_idm];
+      c2_idm_prime = -a_prime_over_a*c2_idm;
     }
     else {
       c2_idm = 0.;
@@ -9322,9 +9333,50 @@ int perturbations_derivs(double tau,
         -a_prime_over_a*theta_idm
         +metric_euler
         + k2*c2_idm*delta_idm; /* idm velocity */
-
+      
       if (pth->has_idm_g == _TRUE_) {
-        dy[pv->index_pt_theta_idm] += -S_idm_g*dmu_idm_g*(theta_idm-theta_g); /* correction to idm velocity due to idm_g */
+
+        dmu_idm_g = pvecthermo[pth->index_th_dmu_idm_g];
+        ddmu_idm_g = pvecthermo[pth->index_th_ddmu_idm_g];
+        tau_dmu_idm_g = 1./dmu_idm_g;
+        dtau_dmu_idm_g = -ddmu_idm_g*tau_dmu_idm_g*tau_dmu_idm_g;
+        F_idm_g = tau_dmu_idm_g/(1+S_idm_g);
+        theta_idm_prime = 
+           -R/(S_idm_g+R+S_idm_g*R)*(a_prime_over_a*theta_idm-k2*c2_idm*delta_idm)
+           -S_idm_g/(S_idm_g+R+S_idm_g*R)*(a_prime_over_a*theta_b-k2*cb2*delta_b)
+           +S_idm_g*R/(S_idm_g+R+S_idm_g*R)*k2*delta_g/4;
+        theta_b_prime = theta_idm_prime;
+        theta_idm_prime_prime = 
+           -(a_prime_over_a*S_idm_g*R*R)/(S_idm_g+R+S_idm_g*R)/(S_idm_g+R+S_idm_g*R)*(a_prime_over_a*theta_idm-k2*c2_idm*delta_idm)
+           -R/(S_idm_g+R+S_idm_g*R)*((a_primeprime_over_a-a_prime_over_a*a_prime_over_a)*theta_idm+a_prime_over_a*theta_idm_prime-k2*c2_idm_prime*delta_idm-k2*c2_idm*(-theta_idm-metric_continuity))
+           -(a_prime_over_a*S_idm_g*S_idm_g*R)/(S_idm_g+R+S_idm_g*R)/(S_idm_g+R+S_idm_g*R)*(a_prime_over_a*theta_b-k2*cb2*delta_b)
+           -S_idm_g/(S_idm_g+R+S_idm_g*R)*((a_primeprime_over_a-a_prime_over_a*a_prime_over_a)*theta_b+a_prime_over_a*theta_b_prime-k2*pvecthermo[pth->index_th_dcb2]*delta_b-k2*cb2*(-theta_b-metric_continuity))
+           -(a_prime_over_a*S_idm_g*R*(S_idm_g+R))/(S_idm_g+R+S_idm_g*R)/(S_idm_g+R+S_idm_g*R)*k2*delta_g/4
+           +S_idm_g*R/(S_idm_g+R+S_idm_g*R)*k2*(-4./3.*(theta_g+metric_continuity));
+        if ((tau_dmu_idm_g/tau_h < ppr->tight_coupling_trigger_tau_dmu_idm_g_over_tau_h) &&
+            (tau_dmu_idm_g/tau_k < ppr->tight_coupling_trigger_tau_dmu_idm_g_over_tau_k)) {
+            if (ppt->gauge == newtonian) {
+
+                class_stop(error_message,
+                        "the TCA for to tau_dmu_idm_g/tau_h and tau_dmu_idm_g/tau_k is coded in synchronous gauge, not newtonian: change gauge ");
+                                         }
+           class_call(perturbations_tca_slip_and_shear(y,pppaw,error_message),
+                 error_message,
+                 error_message);
+
+            tca_slip_idm_g = 
+             (dtau_dmu_idm_g/tau_dmu_idm_g-2.*a_prime_over_a/(1.+S_idm_g))*(theta_idm-theta_g)
+             +F_idm_g*(-a_primeprime_over_a*theta_idm+k2*(-a_prime_over_a*delta_g/2.+c2_idm*(-theta_idm-metric_continuity)-4./3.*(-theta_g-metric_continuity)/4.)-a_prime_over_a*metric_euler);
+             -F_idm_g/R*(-a_primeprime_over_a*theta_b+k2*cb2*(-theta_b-metric_continuity)-theta_idm_prime_prime);
+            dy[pv->index_pt_theta_idm]= 
+              -R/(S_idm_g+R+S_idm_g*R)*(a_prime_over_a*theta_idm-k2*c2_idm*delta_idm)  
+              -S_idm_g/(S_idm_g+R+S_idm_g*R)*(a_prime_over_a*theta_b-k2*cb2*delta_b)
+              -(S_idm_g+S_idm_g*R)/(S_idm_g+R+S_idm_g*R)*tca_slip_idm_g
+              +S_idm_g/(S_idm_g+R+S_idm_g*R)*ppw->tca_slip
+              +S_idm_g*R/(S_idm_g+R+S_idm_g*R)*k2*(delta_g/4-s2_squared*ppw->tca_shear_g)
+              +metric_euler;
+          }
+        else dy[pv->index_pt_theta_idm] += -S_idm_g*dmu_idm_g*(theta_idm-theta_g); /* correction to idm velocity due to idm_g */
       }
       if (pth->has_idm_b == _TRUE_){
         dy[pv->index_pt_theta_idm] += -R_idm_b*(theta_idm-theta_b); /* correction to idm velocity due to idm_b */
@@ -9399,7 +9451,7 @@ int perturbations_derivs(double tau,
       class_call(perturbations_tca_slip_and_shear(y,pppaw,error_message),
                  error_message,
                  error_message);
-
+      
       /* perturbed recombination has an impact **/
       dy[pv->index_pt_theta_b] =
         (-a_prime_over_a*theta_b
@@ -9408,7 +9460,18 @@ int perturbations_derivs(double tau,
         +metric_euler;
 
       if (pth->has_idm_g == _TRUE_) {
-        dy[pv->index_pt_theta_b] +=
+        if ((tau_dmu_idm_g/tau_h < ppr->tight_coupling_trigger_tau_dmu_idm_g_over_tau_h) &&
+            (tau_dmu_idm_g/tau_k < ppr->tight_coupling_trigger_tau_dmu_idm_g_over_tau_k)) {
+            dy[pv->index_pt_theta_b]=
+              -R/(S_idm_g+R+S_idm_g*R)*(a_prime_over_a*theta_idm-k2*c2_idm*delta_idm)  
+              -S_idm_g/(S_idm_g+R+S_idm_g*R)*(a_prime_over_a*theta_b-k2*cb2*delta_b)
+              -(R+S_idm_g*R)/(S_idm_g+R+S_idm_g*R)*ppw->tca_slip
+              +R/(S_idm_g+R+S_idm_g*R)*tca_slip_idm_g
+              +S_idm_g*R/(S_idm_g+R+S_idm_g*R)*k2*(delta_g/4-s2_squared*ppw->tca_shear_g)
+              +metric_euler;
+          }
+
+        else dy[pv->index_pt_theta_b] +=
           -dmu_idm_g * R/(1.+R) * (theta_g - theta_idm);
       }
       if (pth->has_idm_b == _TRUE_) {
@@ -9510,7 +9573,14 @@ int perturbations_derivs(double tau,
           +k2*(0.25*delta_g-s2_squared*ppw->tca_shear_g)+(1.+R)/R*metric_euler;
 
         if (pth->has_idm_g == _TRUE_) {
-          dy[pv->index_pt_theta_g] +=
+          if ((tau_dmu_idm_g/tau_h < ppr->tight_coupling_trigger_tau_dmu_idm_g_over_tau_h) &&
+              (tau_dmu_idm_g/tau_k < ppr->tight_coupling_trigger_tau_dmu_idm_g_over_tau_k)) {
+           dy[pv->index_pt_theta_g] +=
+             -(dy[pv->index_pt_theta_idm]+a_prime_over_a*theta_idm-k2*c2_idm*delta_g)/S_idm_g
+             +1/S_idm_g*metric_euler;
+          }
+
+          else dy[pv->index_pt_theta_g] +=
             -dmu_idm_g * (theta_g - theta_idm);
         }
         if (pth->has_idm_b == _TRUE_) {
@@ -9600,7 +9670,7 @@ int perturbations_derivs(double tau,
 
         dy[pv->index_pt_theta_nudm] = - a_prime_over_a*y[pv->index_pt_theta_nudm] + metric_euler; /* nudm velocity */
         //printf("derivs nudm before ncdm term\n"); //debug
-        if (pba->has_ncdm_dm_interactions == _TRUE_) {
+        if (pba->has_ncdm_dm_interactions == _TRUE_ ) {
           for (n_ncdm=0; n_ncdm<pv->N_ncdm; n_ncdm++) {
             dy[pv->index_pt_theta_nudm] += ppw->nudm_interaction_term[n_ncdm];
             //printf("dy[pv->index_pt_theta_nudm]=%g\n",dy[pv->index_pt_theta_nudm]);
@@ -9609,6 +9679,7 @@ int perturbations_derivs(double tau,
         if(pth->has_coupling_urDM==_TRUE_ && ppw->approx[ppw->index_ap_rsa] == (int)rsa_off)
 	         dy[pv->index_pt_theta_nudm] += S_urDM*pvecthermo[pth->index_th_dmu_urDM]*(y[pv->index_pt_theta_ur]-y[pv->index_pt_theta_nudm]);
           //  printf("pvecthermo[pth->index_th_dmu_urDM]9485=%g,pba->H0=%g,pth->n_urDM=%g,size=%d\n",pvecthermo[pth->index_th_dmu_urDM],pba->H0,pth->n_urDM,pth->th_size);
+
       }
     }
 
@@ -9867,9 +9938,9 @@ int perturbations_derivs(double tau,
             epsilon = sqrt(q*q+a2*pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]);
             epsilon_phy = sqrt(p_phy*p_phy+pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]);
             epsilon_now = sqrt(q*q+pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]);
-            ratio = (epsilon_phy*epsilon_phy+pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm])/(epsilon_now*epsilon_now+pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]);
-            C_nudm = ppw->pvecback[pba->index_bg_A_nudm1+n_ncdm]*q2/epsilon/epsilon;
-            C_nudm_int_psi2 +=2*q2*pba->w_ncdm[n_ncdm][index_q]*C_nudm*ratio;
+            ratio = 1-1./3.*q2/epsilon/epsilon; 
+            C_nudm = ppw->pvecback[pba->index_bg_A_nudm1+n_ncdm]*q*epsilon/epsilon_now/epsilon_now;
+            C_nudm_int_psi2 +=q2*pba->w_ncdm[n_ncdm][index_q]*C_nudm;
             divisor_int_mean +=q2*pba->w_ncdm[n_ncdm][index_q];
             
           
@@ -9908,7 +9979,7 @@ int perturbations_derivs(double tau,
           //printf("ncdm before nudm\n"); //debug
           if (pba->has_ncdm_dm_interactions == _TRUE_){
             //printf("ncdm nudm interaction term = %f\n", ppw->nudm_interaction_term[n_ncdm]); //debug
-            C_nudm = ppw->pvecback[pba->index_bg_A_nudm1+n_ncdm]*q*q/epsilon/epsilon;
+            C_nudm = ppw->pvecback[pba->index_bg_A_nudm1+n_ncdm]*q*epsilon/epsilon_now/epsilon_now;
             dy[idx+1] -= pvecback[pba->index_bg_rho_nudm]/(rho_ncdm_bg+p_ncdm_bg) *ppw->nudm_interaction_term[n_ncdm]; //
      
              
@@ -9966,10 +10037,10 @@ int perturbations_derivs(double tau,
             epsilon_phy = sqrt(p_phy*p_phy+pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]);
             epsilon_now = sqrt(q*q+pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]);
             qk_div_epsilon = k*q/epsilon;
-            ratio = (epsilon_phy*epsilon_phy+pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm])/(epsilon_now*epsilon_now+pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]);
+            ratio = 1-1./3.*q2/epsilon/epsilon; 
 
             if (pba->has_ncdm_dm_interactions == _TRUE_) {
-              C_nudm = pvecback[pba->index_bg_A_nudm1+n_ncdm]*q*q/epsilon/epsilon;
+              C_nudm = pvecback[pba->index_bg_A_nudm1+n_ncdm]*q*epsilon/epsilon_now/epsilon_now;
               //printf("Derivs, no approx:\n");
               //printf("C_nudm = %f, log(a) = %f, q= %f, n_ncdm = %i\n", C_nudm, log10(a), q, n_ncdm);
             }
@@ -9986,7 +10057,7 @@ int perturbations_derivs(double tau,
 
               if (pba->has_ncdm_dm_interactions == _TRUE_) {
                // dy[idx+1] += -C_nudm*(y[idx+1] + y[pv->index_pt_theta_nudm]/3./k * epsilon/q * dlnf0_dlnq); 
-                dy[idx+1] += -C_nudm*ratio*2*(1+p_phy*p_phy/3./(epsilon_phy*epsilon_phy+pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]))*(y[idx+1] + y[pv->index_pt_theta_nudm]/3./k * epsilon/q * dlnf0_dlnq);
+                dy[idx+1] += -ratio*C_nudm*(y[idx+1] + y[pv->index_pt_theta_nudm]/3./k * epsilon/q * dlnf0_dlnq);
                  // nudm interaction term
                  //printf("dy[idx+1]=%g\n",dy[idx+1]);
                 //printf("ncdm nudm interaction term (inintegrated) = %f\n", -C_nudm*(y[idx+1] + y[pv->index_pt_theta_nudm]/3./k * epsilon/q * dlnf0_dlnq)); //debug
@@ -10002,7 +10073,7 @@ int perturbations_derivs(double tau,
              // -0.9*C_nudm*y[idx+2];// nudm interaction term
             dy[idx+2] = qk_div_epsilon/5.0*(2*s_l[2]*y[idx+1]-3.*s_l[3]*y[idx+3])
               -s_l[2]*metric_shear*2./15.*dlnf0_dlnq
-              -2*ratio*C_nudm*y[idx+2];
+              -C_nudm*y[idx+2];
               //printf("dy[idx+2]=%g\n",dy[idx+2]);
 
             /** - -----> ncdm l>3 for given momentum bin */
@@ -10011,7 +10082,7 @@ int perturbations_derivs(double tau,
               //dy[idx+l] = qk_div_epsilon/(2.*l+1.0)*(l*s_l[l]*y[idx+(l-1)]-(l+1.)*s_l[l+1]*y[idx+(l+1)])
               //-C_nudm*y[idx+l];
               dy[idx+l] = qk_div_epsilon/(2.*l+1.0)*(l*s_l[l]*y[idx+(l-1)]-(l+1.)*s_l[l+1]*y[idx+(l+1)])
-              -2*ratio*C_nudm*y[idx+l];
+              -C_nudm*y[idx+l];
               // printf("dy[idx+%d]=%g\n",l,dy[idx+l]);
             }
 
@@ -10401,9 +10472,11 @@ int perturbations_tca_slip_and_shear(double * y,
   double metric_continuity=0.,metric_euler=0.,metric_shear=0.,metric_shear_prime=0.;
 
   /* idm_g effects on tca */
-  double theta_idm = 0., theta_idm_prime = 0.;
+  double theta_idm = 0., theta_idm_prime = 0., theta_idm_prime_prime =0.,theta_b_prime;
   double tau_2_idm_g=0., dtau_2_idm_g=0.;
-  double dmu_idm_g = 0., ddmu_idm_g = 0.;
+  double dmu_idm_g = 0., ddmu_idm_g = 0., dtau_dmu_idm_g = 0., tau_dmu_idm_g=0.;
+  double S_idm_g=0., c2_idm=0., delta_idm=0.,c2_idm_prime=0.;
+  double tau_h=0., tau_k=0.;
   /* in case of idm_b - for notation see 1802.06788 */
   double tau_idm_b=0., dtau_idm_b=0.;
   double R_idm_b = 0., R_idm_b_prime = 0.;
@@ -10437,7 +10510,12 @@ int perturbations_tca_slip_and_shear(double * y,
   a_primeprime_over_a = pvecback[pba->index_bg_H_prime] * a + 2. * a_prime_over_a * a_prime_over_a;
   R = 4./3. * pvecback[pba->index_bg_rho_g]/pvecback[pba->index_bg_rho_b];
   s2_squared = 1.-3.*pba->K/k2;
-
+  S_idm_g = 4./3. * pvecback[pba->index_bg_rho_g] / pvecback[pba->index_bg_rho_idm];
+  c2_idm = pvecthermo[pth->index_th_c2_idm];
+  c2_idm_prime = -a_prime_over_a*c2_idm;
+  tau_k = 1./pppaw->k;
+  tau_h = 1./(pvecback[pba->index_bg_H]*pvecback[pba->index_bg_a]);
+  delta_idm = y[pv->index_pt_delta_idm];
   /** - --> (a) define short-cut notations for the scalar perturbations */
   if (ppw->approx[ppw->index_ap_rsa] == (int)rsa_off) {
     delta_g = y[pv->index_pt_delta_g];
@@ -10468,7 +10546,8 @@ int perturbations_tca_slip_and_shear(double * y,
   if (pth->has_idm_g == _TRUE_) {
     dmu_idm_g = pvecthermo[pth->index_th_dmu_idm_g];
     ddmu_idm_g = pvecthermo[pth->index_th_ddmu_idm_g];
-
+    tau_dmu_idm_g = 1./dmu_idm_g;
+    dtau_dmu_idm_g = -ddmu_idm_g*tau_dmu_idm_g*tau_dmu_idm_g;
     class_test(ppr->tight_coupling_approximation != (int)first_order_CLASS && ppr->tight_coupling_approximation != (int)compromise_CLASS,
                ppt->error_message,
                "idm_g is only coded with the first order and compromise CLASS approximation in the tight coupling regime.");
@@ -10543,7 +10622,23 @@ int perturbations_tca_slip_and_shear(double * y,
 
   /** - ---> standard photon velocity derivative without tca (neglecting shear) - only needed for idm_g_dr behavior */
   if (pth->has_idm_g == _TRUE_) {
-	theta_prime += -R/(1.+R) * dmu_idm_g * (theta_g - theta_idm);
+    if ((tau_dmu_idm_g/tau_h < ppr->tight_coupling_trigger_tau_dmu_idm_g_over_tau_h) &&
+        (tau_dmu_idm_g/tau_k < ppr->tight_coupling_trigger_tau_dmu_idm_g_over_tau_k)) {
+      theta_idm_prime = 
+           -R/(S_idm_g+R+S_idm_g*R)*(a_prime_over_a*theta_idm-k2*c2_idm*delta_idm)
+           -S_idm_g/(S_idm_g+R+S_idm_g*R)*(a_prime_over_a*theta_b-k2*cb2*delta_b)
+           +S_idm_g*R/(S_idm_g+R+S_idm_g*R)*k2*delta_g/4;
+        theta_prime = theta_idm_prime;
+        theta_idm_prime_prime = 
+           -(a_prime_over_a*S_idm_g*R*R)/(S_idm_g+R+S_idm_g*R)/(S_idm_g+R+S_idm_g*R)*(a_prime_over_a*theta_idm-k2*c2_idm*delta_idm)
+           -R/(S_idm_g+R+S_idm_g*R)*((a_primeprime_over_a-a_prime_over_a*a_prime_over_a)*theta_idm+a_prime_over_a*theta_idm_prime-k2*c2_idm_prime*delta_idm-k2*c2_idm*(-theta_idm-metric_continuity))
+           -(a_prime_over_a*S_idm_g*S_idm_g*R)/(S_idm_g+R+S_idm_g*R)/(S_idm_g+R+S_idm_g*R)*(a_prime_over_a*theta_b-k2*cb2*delta_b)
+           -S_idm_g/(S_idm_g+R+S_idm_g*R)*((a_primeprime_over_a-a_prime_over_a*a_prime_over_a)*theta_b+a_prime_over_a*theta_b_prime-k2*pvecthermo[pth->index_th_dcb2]*delta_b-k2*cb2*(-theta_b-metric_continuity))
+           -(a_prime_over_a*S_idm_g*R*(S_idm_g+R))/(S_idm_g+R+S_idm_g*R)/(S_idm_g+R+S_idm_g*R)*k2*delta_g/4
+           +S_idm_g*R/(S_idm_g+R+S_idm_g*R)*k2*(-4./3.*(theta_g+metric_continuity));
+    }
+
+	  else theta_prime += -R/(1.+R) * dmu_idm_g * (theta_g - theta_idm);
   }
 
   /** - ---> like Ma & Bertschinger */
@@ -10583,8 +10678,15 @@ int perturbations_tca_slip_and_shear(double * y,
 
 
   if (pth->has_idm_g == _TRUE_ && (ppr->tight_coupling_approximation == (int)first_order_CLASS || ppr->tight_coupling_approximation == (int)second_order_CLASS ||  ppr->tight_coupling_approximation == (int)compromise_CLASS )) {
-    slip += -F*dmu_idm_g * ( k2*delta_g/4. + metric_euler + pvecthermo[pth->index_th_dkappa]*(theta_b-theta_g) + dmu_idm_g * (theta_idm - theta_g)
-                             - theta_idm_prime);
+
+    if ((tau_dmu_idm_g/tau_h < ppr->tight_coupling_trigger_tau_dmu_idm_g_over_tau_h) &&
+        (tau_dmu_idm_g/tau_k < ppr->tight_coupling_trigger_tau_dmu_idm_g_over_tau_k)) {
+     slip += -F/S_idm_g*(-a_primeprime_over_a*theta_idm+k2*c2_idm*(-theta_idm-metric_continuity)-theta_idm_prime_prime);
+    }
+
+    else slip += -F*(dmu_idm_g * ( k2*delta_g/4. + metric_euler + pvecthermo[pth->index_th_dkappa]*(theta_b-theta_g) + dmu_idm_g * (theta_idm - theta_g)
+                             - theta_idm_prime)+(ddmu_idm_g-2*a_prime_over_a*dmu_idm_g)*(theta_idm - theta_g));
+  
   }
 
   if (pth->has_idm_b == _TRUE_) {
